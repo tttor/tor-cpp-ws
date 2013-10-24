@@ -1,0 +1,299 @@
+the number of adjacent_vertices depends on the number of out edges.
+therefore, in a multigraphm, for example, there are 2 vertices, vA and vB connected by 2 edges, then the number of adjacent_vertices of A is 2
+
+Search algorithm, like depth_first_visit(), leave vertex_color marks, so if you want to invoke them several time, do not forget to reset their vertex_color prop.
+
+We can not remove_edge() on a grapg of FilteredGraph Type.
+
+Writing a graph using dynamic prop. We cannot write vertex attributes other than vertex_id, not as flexible as writing edge attributes.
+E.g.  dp.property("vertex_jstates", get(vertex_jstates, tmm)); this does not write anything 
+
+$ g++ graphviz.cpp -lboost_graph
+
+MessyHome->CanGrasp_CAN1[] [label="TRANSIT_R_HOME_MESSY-SPOT\n4.29274",fontsize="10"];
+>> In reference to the above line, there are 2 nodes: MessyHome and CanGrasp_CAN1 
+dot ignores ...[]
+
+Whenever no label given,
+$ dot bla bla
+will print whatever node id in the dot file
+
+read_graphviz stores node identifier names under the vertex property map named node_id.
+In the example, dp.property("node_id", get(vertex_name, tmm));
+
+the identifier of a graph encoded in .dot is what is written in the beginning of each line, e.g 0->1
+the node_id, which is assigned in vertex_name map is 0 and 1.
+Then the problem is how to use write_graphviz() that writes BLA->BLABLA, not 0->1 anymore (note in vertex/edge writer class, we do not specify that vertex id, so it uses the default, which is 0, 1)
+
+read_graphviz needs a dp that has all attributes in the dot file.
+
+Note that in the newer version, at least > 4.6, to use write_graphviz() with dp, use write_graphviz_dp()
+
+Three-way coloring is useful for several graph algorithms, so the header file boost/graph/properties.hpp defines the following enumerated type.
+enum default color type { white color, gray color, black color };
+BGL p.48
+
+===
+>> A* in Implicit graph:
+
+http://boost.2283326.n4.nabble.com/Boost-Graph-Lib-gt-A-td2594418.html
+http://www.boost.org/doc/libs/1_38_0/libs/graph/doc/astar_search.html
+http://stackoverflow.com/questions/9547097/boost-implicit-graph-and-astar-search-no-init
+http://stackoverflow.com/questions/8620613/bgl-interior-properties-for-implicit-graph
+http://stackoverflow.com/questions/8662770/why-does-bgl-a-require-the-implicit-graph-to-model-vertexlistgraph
+http://permalink.gmane.org/gmane.comp.lib.boost.user/56425
+http://permalink.gmane.org/gmane.comp.lib.boost.user/73350
+http://www.digipedia.pl/usenet/thread/14904/11245/
+
+
+>> Graph building 1
+see adjacency_list.cpp
+
+  typedef adjacency_list<vecS, listS, undirectedS, 
+    VertexProperties, EdgeProperties> Graph;
+
+  const int V = 5;
+  Graph g(V);
+
+  add_edge(vertex(0, g), vertex(1, g), EdgeProperties("joe"), g);
+  add_edge(vertex(1, g), vertex(2, g), EdgeProperties("curly"), g);
+  add_edge(vertex(1, g), vertex(3, g), EdgeProperties("dick"), g);
+  add_edge(vertex(2, g), vertex(4, g), EdgeProperties("tom"), g);
+  add_edge(vertex(3, g), vertex(4, g), EdgeProperties("harry"), g);
+
+>> Graph building 2
+  std::ifstream file_in("makefile-dependencies.dat");
+  typedef graph_traits<file_dep_graph2>::vertices_size_type size_type;
+  size_type n_vertices;
+  file_in >> n_vertices;        // read in number of vertices
+
+  std::istream_iterator<std::pair<size_type, size_type> > input_begin(file_in), input_end;
+  file_dep_graph2 g(input_begin, input_end, n_vertices);
+
+>> Graph building 3
+  typedef adjacency_list<vecS, vecS, bidirectionalS, 
+          no_property,// Vertex prop. (default)
+          property<int, edge_weight_t>,// Edge prop.
+          no_property,// Graph prop. (default) 
+          vecS> // ???
+          Graph;
+
+  const std::size_t n = 3;
+  typedef std::pair<std::size_t, std::size_t> E;
+  E edge_array[] = { E(0,1), E(0,2), E(0,1) };
+
+  const std::size_t m = sizeof(edge_array) / sizeof(E);
+  Graph g(edge_array, edge_array + m, n);
+
+>> graph building 4: 
+from a file containing edge connectivities
+see accum-compile-time.cpp
+
+  std::ifstream file_in("makefile-dependencies.dat");
+
+  std::istream_iterator<std::pair<size_type, size_type> >
+    input_begin(file_in), input_end;
+
+  file_dep_graph2 g(input_begin, input_end, n_vertices);
+
+>> graph building 5
+using add_vertex(), add_edge()
+see bfs-name-printer.cpp
+
+template <typename Graph, typename VertexNameMap, typename TransDelayMap>
+void
+build_router_network(Graph & g, VertexNameMap name_map,
+                     TransDelayMap delay_map)
+{
+  typename graph_traits < Graph >::vertex_descriptor a, b, c, d, e;
+  a = add_vertex(g);
+  name_map[a] = 'a';
+  b = add_vertex(g);
+  name_map[b] = 'b';
+  c = add_vertex(g);
+  name_map[c] = 'c';
+  d = add_vertex(g);
+  name_map[d] = 'd';
+  e = add_vertex(g);
+  name_map[e] = 'e';
+
+  typename graph_traits<Graph>::edge_descriptor ed;
+  bool inserted;
+
+  tie(ed, inserted) = add_edge(a, b, g);
+  delay_map[ed] = 1.2;
+  tie(ed, inserted) = add_edge(a, d, g);
+  delay_map[ed] = 4.5;
+  tie(ed, inserted) = add_edge(b, d, g);
+  delay_map[ed] = 1.8;
+  tie(ed, inserted) = add_edge(c, a, g);
+  delay_map[ed] = 2.6;
+  tie(ed, inserted) = add_edge(c, e, g);
+  delay_map[ed] = 5.2;
+  tie(ed, inserted) = add_edge(d, c, g);
+  delay_map[ed] = 0.4;
+  tie(ed, inserted) = add_edge(d, e, g);
+  delay_map[ed] = 3.3;
+}
+
+>> graph building 6
+from file using io; see adjacency_list_io.cpp
+
+>> graph building 7
+with default properties; see boost_web_graph.cpp
+
+  typedef adjacency_list<vecS, vecS, directedS, 
+    property<vertex_name_t, std::string, 
+      property<vertex_color_t, default_color_type> >,
+    property<edge_name_t, std::string, property<edge_weight_t, int> >
+  > Graph;
+  
+>> accessing vertices, edges
+
+  boost::graph_traits<Graph>::vertex_iterator vi, viend;
+  for (boost::tie(vi,viend) = vertices(g); vi != viend; ++vi);
+
+	 graph_traits<Graph>::out_edge_iterator ei, edge_end;
+	 for (boost::tie(ei,edge_end) = out_edges(*i, g); ei != edge_end; ++ei);
+
+>> Member of GraphTraits
+see p.245
+
+>> >> set, get user defined properties 2
+see adjacency_list.cpp
+    bfs-name-printer.cpp
+
+struct EdgeProperties {
+  EdgeProperties(const std::string& n) : name(n) { }
+  std::string name;
+};
+
+struct VertexProperties {
+  std::size_t index;
+  boost::default_color_type color;
+};
+
+int main()
+{
+...
+		property_map<Graph, std::size_t VertexProperties::*>::type 
+    id = get(&VertexProperties::index, g);
+  property_map<Graph, std::string EdgeProperties::*>::type 
+    name = get(&EdgeProperties::name, g);
+
+  for (boost::tie(vi,viend) = vertices(g); vi != viend; ++vi)
+    id[*vi] = vnum++;
+...
+}
+
+>> accessing out-edges using target(typename graph traits<Graph>::edge descriptor e, const Graph& g)
+NOTE: source(typename graph_traits<Graph>::edge descriptor e, const Graph& g)
+
+  graph_traits<Graph>::vertex_iterator i, end;
+  graph_traits<Graph>::out_edge_iterator ei, edge_end;
+  for (boost::tie(i,end) = vertices(g); i != end; ++i) {
+    cout << id[*i] << " has ";
+    for (boost::tie(ei,edge_end) = out_edges(*i, g); ei != edge_end; ++ei)
+      cout << " --" << name[*ei] << "--> " << id[target(*ei, g)] << "  ";
+    cout << endl;
+  }
+
+>> about printing
+  property_map<Graph, std::size_t VertexProperties::*>::type 
+    id = get(&VertexProperties::index, g);
+
+  print_edges(g, id);
+  boost::print_vertices(g, id);
+  boost::print_graph(g, id);		
+
+>> remove edge
+remove edge(u, v, g) 
+remove edge(e, g) 
+
+>>  cheat sheet
+p.150 Summary of the graph modifying and property access concepts
+p.139 Summary of the graph traversal concepts.
+p.285 Property tags
+
+>> record the distance of each vertex from the source vertex
+see bfs.cpp
+
+  typedef boost::graph_traits<Graph>::vertex_descriptor Vertex;
+  Vertex s = *(boost::vertices(G).first);
+
+  boost::graph_traits<Graph>::vertices_size_type d[5];
+  std::fill_n(d, 5, 0);
+
+  boost::breadth_first_search
+    (G, s, 
+     boost::visitor(   boost::make_bfs_visitor( boost::record_distances(d, boost::on_tree_edge()) )   )
+    );
+
+>> copy a graph
+see bfs.cpp
+
+>> record the parents of vertices
+see bfs.cpp
+
+>> set, get user defined properties 1
+see accum-compile-time.cpp
+
+  typedef property_map < file_dep_graph2, vertex_name_t >::type name_map_t;
+  typedef property_map < file_dep_graph2, vertex_compile_cost_t >::type
+    compile_cost_map_t;
+  typedef property_map <file_dep_graph2, vertex_distance_t >::type
+    distance_map_t;
+  typedef property_map <file_dep_graph2, vertex_color_t >::type 
+    color_map_t;
+
+  // These 4 lines are doing: Function to get a vertex property map object.
+  name_map_t name_map = get(vertex_name, g);
+  compile_cost_map_t compile_cost_map = get(vertex_compile_cost, g);
+  distance_map_t distance_map = get(vertex_distance, g);
+  color_map_t color_map = get(vertex_color, g);
+
+  std::ifstream name_in("makefile-target-names.dat");
+  std::ifstream compile_cost_in("target-compile-costs.dat");
+  graph_traits < file_dep_graph2 >::vertex_iterator vi, vi_end;
+  for (tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi) {
+    name_in >> name_map[*vi];
+    compile_cost_in >> compile_cost_map[*vi];
+  }
+
+  graph_property_iter_range < file_dep_graph2,
+    vertex_compile_cost_t >::iterator ci, ci_end;
+  tie(ci, ci_end) = get_property_iter_range(g, vertex_compile_cost);
+  std::cout << "total (sequential) compile time: "
+    << std::accumulate(ci, ci_end, 0.0) << std::endl;
+
+  graph_property_iter_range < file_dep_graph2, vertex_name_t >::iterator ci2, ci_end2;
+  tie(ci2, ci_end2) = get_property_iter_range(g, vertex_name);
+  for(;ci2!=ci_end2;++ci2)
+    std::cout << "name: " << *ci2 << std::endl;
+
+>> using a visitor to print the order of discovered vertices using discover_vertex(Vertex u, const Graph &)
+see bfs-name-printer.cpp
+
+>> a neat way to declare vertex or edge descriptor
+
+  typedef graph_traits<Graph> Traits;
+  typedef Traits::vertex_descriptor Vertex;
+  typedef Traits::edge_descriptor Edge;
+
+>> num of vertices, edges
+
+num_vertices(const graph&)
+num_edges(g)
+
+>> what does vertices(g) return?
+vertices(g) RETURNS std::pair<vertex_iterator, vertex_iterator>
+
+Concretely, this for-loop is fine:
+
+for (std::pair<iter_t, iter_t> p = vertices(g); p.first != p.second; ++p.first) {
+  print vertex name(*p.first, name_map); std::cout << ’ ’;
+}
+
+>> convert .dot to .ps; .png
+dot -Tps filename.dot -o outfile.ps
+dot -Tpng filename.dot -o outfile.png

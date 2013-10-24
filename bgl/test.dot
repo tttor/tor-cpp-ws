@@ -1,0 +1,22 @@
+digraph G {
+/*
+0[mass=3.2];
+1[mass=3.2];
+2[mass=3.2];
+3[mass=3.2];
+4[mass=3.2];
+5[mass=3.2];
+*/
+0[color="red"];
+1[color="red"];
+2[color="red"];
+3[color="red"];
+4[color="red"];
+5[color="red"];
+
+0->2 [weight="3.14159"];
+2->3 [weight="3.14159"];
+3->4 [weight="3.14159"];
+4->5 [weight="3.14159"];
+5->1 [weight="3.14159"];
+}

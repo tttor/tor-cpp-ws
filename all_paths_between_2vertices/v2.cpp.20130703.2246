@@ -1,0 +1,115 @@
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/breadth_first_search.hpp>
+
+using namespace boost;
+using namespace std;
+
+template < typename GlobalGraph >
+class tor_bfs_visitor:public default_bfs_visitor 
+{
+
+public:
+  tor_bfs_visitor(vector< vector<typename graph_traits<GlobalGraph>::vertex_descriptor> >* predecessors)
+  :predecessors_(predecessors)
+  { }
+  
+  template < typename Vertex, typename Graph >
+  void discover_vertex(Vertex v, const Graph & g) const
+  {
+    cout << "discover v= " << get(vertex_name,g,v) << endl;
+  }
+  
+  template < typename Vertex, typename Graph >
+  void finish_vertex(Vertex v, const Graph & g) const
+  {
+    cout << "finish v= " << get(vertex_name,g,v) << endl;
+  }
+  
+  template < typename Edge, typename Graph >
+  void examine_edge(Edge e, const Graph & g) const
+  {
+    cout << "examine e=(" << get(vertex_name,g,source(e,g)) << "," << get(vertex_name,g,target(e,g)) << ")" << endl;
+    
+    predecessors_->at(target(e,g)).push_back(source(e,g));
+  }
+  
+  template < typename Edge, typename Graph >
+  void tree_edge(Edge e, const Graph & g) const
+  {
+    cout << "tree_edge e=(" << get(vertex_name,g,source(e,g)) << "," << get(vertex_name,g,target(e,g)) << ")" << endl;
+  }
+
+private:
+vector< vector<typename graph_traits<GlobalGraph>::vertex_descriptor> >* predecessors_;
+};
+
+int
+main()
+{
+  //===========================================================================
+  // Declare the graph type and object, and some property maps.
+
+  typedef 
+  adjacency_list< vecS, vecS, directedS, 
+                  property<vertex_name_t, std::string, property<vertex_color_t, default_color_type> >, 
+                  property<edge_name_t, std::string, property<edge_weight_t, int> > > 
+  Graph;
+  
+  typedef graph_traits<Graph> Traits;
+  typedef Traits::vertex_descriptor Vertex;
+  typedef Traits::edge_descriptor Edge;
+  //===========================================================================
+  // Construct the graph.
+  Graph g;
+ 
+  Edge edge;
+  bool inserted;      
+  
+  tie(edge, inserted) = add_edge(0,1,g);
+  put(vertex_name, g, source(edge,g),"0");
+  put(vertex_name, g, target(edge,g),"1");
+    
+  tie(edge, inserted) = add_edge(1,2,g);
+  put(vertex_name, g, source(edge,g),"1");
+  put(vertex_name, g, target(edge,g),"2");
+    
+  tie(edge, inserted) = add_edge(0,2,g);
+  put(vertex_name, g, source(edge,g),"0");  
+  put(vertex_name, g, target(edge,g),"2");
+  //============================================================================
+  Vertex root = 0;
+  
+  std::vector< std::vector<Vertex> > predecessors(num_vertices(g));
+  
+  tor_bfs_visitor<Graph> vis(&predecessors);
+  breadth_first_search(g,root,visitor(vis));
+  
+  for(size_t i=0; i<predecessors.size(); ++i) 
+  {
+    cout << "predecessors of v=" << i << " are ";
+    
+    for(size_t j=0; j<predecessors.at(i).size(); ++j) 
+    {
+      cout << predecessors.at(i).at(j) << ", ";
+    }
+    cout << endl;
+  }
+
+  //Backtrack
+  std::vector< std::vector<Edge> > paths;
+  Vertex t = 2;
+    
+  
+  
+  
+//  // with record_predecessors
+//  std::vector<Vertex> p(boost::num_vertices(g));
+//  p[root] = root;
+//  boost::breadth_first_search( g,root,boost::visitor(boost::make_bfs_visitor(boost::record_predecessors(&p[0],boost::on_tree_edge()))) );
+//  
+//  for(size_t i=0; i<p.size(); ++i) 
+//  {
+//    cout << "p[" << i << "]= " << p[i] << endl;
+//  }
+  
+}
