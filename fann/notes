@@ -1,0 +1,25 @@
+>> http://leenissen.dk/fann/forum/viewtopic.php?f=1&t=735
+bool create_standard(unsigned int num_layers, ...)
+{
+  va_list layers;
+  va_start(layers, num_layers);
+  unsigned int lay[num_layers];
+  for( int i = 0; i<num_layers; i++ ) lay[i] = va_arg(layers,unsigned int);
+  bool status = create_standard_array(num_layers,lay);
+  va_end(layers);
+  return status;
+}
+>> http://leenissen.dk/fann/forum/viewtopic.php?f=1&t=283
+g++ xor_sample.cpp -o xor_sample -lm -lfann
+
+>> The connection_rate controls how many connections there will be in the network. If the connection rate is set to 1, the network will be fully connected, but if it is set to 0.5 only half of the connections will be set.
+
+>> Network type
+LAYER	Each layer only has connections to the next layer
+SHORTCUT	Each layer has connections to all following layers
+
+>> Training type
+TRAIN_INCREMENTAL	Standard backpropagation algorithm, where the weights are updated after each training pattern.  This means that the weights are updated many times during a single epoch.  For this reason some problems, will train very fast with this algorithm, while other more advanced problems will not train very well.
+TRAIN_BATCH	Standard backpropagation algorithm, where the weights are updated after calculating the mean square error for the whole training set.  This means that the weights are only updated once during a epoch.  For this reason some problems, will train slower with this algorithm.  But since the mean square error is calculated more correctly than in incremental training, some problems will reach a better solutions with this algorithm.
+TRAIN_RPROP	A more advanced batch training algorithm which achieves good results for many problems.  The RPROP training algorithm is adaptive, and does therefore not use the learning_rate.  Some other parameters can however be set to change the way the RPROP algorithm works, but it is only recommended for users with insight in how the RPROP training algorithm works.  The RPROP training algorithm is described by [Riedmiller and Braun, 1993], but the actual learning algorithm used here is the iRPROP- training algorithm which is described by [Igel and Husken, 2000] which is an variety of the standard RPROP training algorithm.
+TRAIN_QUICKPROP	A more advanced batch training algorithm which achieves good results for many problems.  The quickprop training algorithm uses the learning_rate parameter along with other more advanced parameters, but it is only recommended to change these advanced parameters, for users with insight in how the quickprop training algorithm works.  The quickprop training algorithm is described by [Fahlman, 1988].

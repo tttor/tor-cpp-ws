@@ -1,0 +1,226 @@
+#include <boost/graph/astar_search.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/random.hpp>
+#include <boost/random.hpp>
+#include <boost/graph/graphviz.hpp>
+#include <sys/time.h>
+#include <vector>
+#include <list>
+#include <iostream>
+#include <fstream>
+#include <math.h>    // for sqrt
+
+#include <boost/config.hpp>
+
+#if defined(BOOST_MSVC) && BOOST_MSVC <= 1300
+#error adjacency_list_io.hpp has not been ported to work with VC++
+#endif
+
+#include <boost/graph/adjacency_list_io.hpp>
+
+#include <boost/graph/property_iter_range.hpp>
+
+using namespace boost;
+using namespace std;
+
+enum edge_flag_t { edge_flag };
+
+namespace boost {
+  BOOST_INSTALL_PROPERTY(edge, flag);
+}
+
+
+typedef float cost;
+
+typedef property< edge_weight_t, cost, property<edge_flag_t, size_t> > EdgeProperty;
+//typedef property< edge_weight_t, cost > EdgeProperty;
+typedef property<vertex_name_t, std::string> VertexProperty;
+typedef adjacency_list<listS, vecS, directedS, VertexProperty, EdgeProperty > graph_t;  
+
+typedef property_map<graph_t, edge_weight_t>::type WeightMap;
+typedef property_map<graph_t, edge_flag_t>::type FlagMap;
+
+static WeightMap g_weight_map;
+static FlagMap g_flag_map;
+
+template<class Name>
+class state_writer
+{
+public:
+  state_writer(Name n)
+    : name_(n)
+  {}
+  
+  template <class Vertex>
+  void operator()(ostream& out, const Vertex& v) const
+  {
+    out << "[label=\"" << name_[v]
+        << "\", fontsize=\"11\"]";
+  }
+private:
+  Name name_;
+};
+
+template <class WeightMap>
+class geo_cost_writer {
+public:
+  geo_cost_writer(WeightMap w) : wm_(w) {}
+  template <class Edge>
+  void operator()(ostream &out, const Edge& e) const {
+    out << "[label=\"" << wm_[e] << "\", fontsize=\"11\"]";
+  }
+private:
+  WeightMap wm_;
+};
+
+template <class Graph, class CostType>
+class geo_cost_heuristic:public astar_heuristic<Graph, CostType>
+{
+public:
+  typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
+  geo_cost_heuristic(Vertex goal)
+    :goal_(goal)
+  {}
+  
+  CostType operator()(Vertex u)
+  {
+//    cout << "in h()" << endl;
+    return 0;
+  }
+private:
+  Vertex goal_;
+};
+
+struct found_goal {}; // exception for termination
+struct plan_geo {};
+
+// visitor that terminates when we find the goal
+template <class Vertex, class Edge>
+class astar_goal_visitor : public boost::default_astar_visitor
+{
+public:
+  astar_goal_visitor(Vertex goal) : m_goal(goal) {}
+  template <class Graph>
+  void examine_vertex(Vertex u, Graph& g) {
+    if(u == m_goal)
+      throw found_goal();
+  }
+  
+  template <class Graph>
+  void
+  discover_vertex(Vertex u, Graph& g)
+  {
+    std::cout << "discover_vertex(" << u << ")" << std::endl;
+  }
+  
+  template<class Graph>
+  void
+  examine_edge(Edge e, Graph& g)
+  {
+    std::cout << "examine_edge( (" << boost::source(e, g) << "," << boost::target(e, g) << ") )" << std::endl;
+
+    typedef typename property_map<Graph, edge_flag_t>::const_type FlagMap;// _must_ be ::const_type
+    FlagMap flag_map = get(edge_flag, g);
+
+    if(flag_map[e]==0)
+    {
+      // Plan geometrically
+      g_weight_map[e] = 2.0;
+
+      g_flag_map[e] = 1;
+      throw plan_geo();
+    }
+  }
+  
+private:
+  Vertex m_goal;
+};
+
+int 
+main(int argc, char* argv[])
+{
+  typedef graph_t::vertex_descriptor vertex;
+  typedef graph_t::edge_descriptor edge;
+  
+  graph_t g; 
+  
+  std::ifstream graph_data("graph.dat"); 
+  graph_data >> read( g );
+//  std::cout << "graph g:\n"  << write( g ) << std::endl; // This does not work with 1.46.1
+ 
+  // Sync the global copy of edge_weight  
+  g_weight_map = get(edge_weight, g);
+  g_flag_map = get(edge_flag, g);
+  
+  // Determine start and goal nodes.
+  enum{MessyHome=0, TidyHome};// sync with the task_planner.cpp
+  
+  vertex start = MessyHome;
+  vertex goal = TidyHome;  
+
+  // Write dot file
+   property_map<graph_t, vertex_name_t>::type
+    name_map = get(vertex_name, g);
+    
+  ofstream dotfile;
+  dotfile.open("b.dot");
+  write_graphviz(dotfile, g,
+                state_writer< property_map<graph_t, vertex_name_t>::type >(name_map),
+                geo_cost_writer< WeightMap >(g_weight_map)
+               );  
+
+  vector<graph_t::vertex_descriptor> p(num_vertices(g));
+  vector<cost> d(num_vertices(g));
+  
+  // Assume that the A* will always be able to find a path to the goal.
+  // Therefore, it can get out from the loop
+  while(true)
+  {
+    try 
+    {
+      astar_search(g, 
+                   start,
+                   geo_cost_heuristic<graph_t, cost>(goal),
+                   predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex, edge>(goal))
+                  );
+    }
+    catch(plan_geo pg)
+    {
+      boost::graph_traits<graph_t>::edge_iterator ei, ei_end;
+      boost::tie(ei,ei_end) = edges(g);
+
+      for(; ei!=ei_end; ++ei)
+      {
+        // Update flag
+        put(edge_flag, g, *ei, g_flag_map[*ei]);
+        
+        // Update weight  
+        put(edge_weight, g, *ei, g_weight_map[*ei]);
+      }
+      
+      continue;
+    }
+    catch(found_goal fg) 
+    { // found a path to the goal
+      list<vertex> shortest_path;
+      for(vertex v = goal;; v = p[v]) 
+      {
+        shortest_path.push_front(v);
+        if(p[v] == v)
+          break;
+      }
+      
+      cout << "Shortest path= ";
+      list<vertex>::iterator spi = shortest_path.begin();
+      cout << name_map[start];
+      for(++spi; spi != shortest_path.end(); ++spi)
+        cout << " -> " << name_map[*spi];
+      cout << endl << "Total travel time: " << d[goal] << endl;
+      cout << "Found a path" << endl;
+      
+      break;
+    }
+  }
+ 
+  return 0;
+}// end of: main()

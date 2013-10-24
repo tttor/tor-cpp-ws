@@ -1,0 +1,27 @@
+Dest    Next Hop    Total Cost
+H1    RT10     21
+N1    RT3     10
+N10    RT10     13
+N11    RT10     14
+N12    RT10     10
+N13    RT5     14
+N14    RT5     14
+N15    RT10     17
+N2    RT3     10
+N3    RT3     7
+N4    RT3     8
+N6    RT10     8
+N7    RT10     12
+N8    RT10     10
+N9    RT10     11
+RT1    RT3     7
+RT10    RT10     7
+RT11    RT10     10
+RT12    RT10     11
+RT2    RT3     7
+RT3    RT3     6
+RT4    RT3     7
+RT5    RT5     6
+RT7    RT10     8
+RT8    RT10     8
+RT9    RT10     11
