@@ -1,0 +1,1 @@
+/home/tor/robotics/ws/tor-cpp-ws/opencv/capture-video/CMakeFiles/capture-video.dir
